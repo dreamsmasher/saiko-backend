@@ -1,0 +1,55 @@
+name:                saiko-backend
+version:             0.1.0.0
+github:              "dreamsmasher/saiko-backend"
+license:             BSD3
+author:              "Norman Liu"
+maintainer:          "normanwuweiliu@gmail.com"
+copyright:           "Copright 2020 Norman Liu"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/dreamsmasher/saiko-backend#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- scotty
+- warp
+- mtl
+- transformers
+- containers
+- aeson
+- lens
+
+library:
+  source-dirs: src
+
+executables:
+  saiko-backend-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - saiko-backend
+
+tests:
+  saiko-backend-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - saiko-backend
