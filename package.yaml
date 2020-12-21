@@ -28,6 +28,9 @@ dependencies:
 - containers
 - aeson
 - lens
+- bytestring
+- text
+- http-types
 
 library:
   source-dirs: src

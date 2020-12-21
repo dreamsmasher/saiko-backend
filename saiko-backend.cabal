@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 269a8da2bc502094681a5c4c830109492161aaa9ffe8044d41dff2d979bba157
+-- hash: 2ceb76e9fc1db103efd996e73cab52100ab92411af866a41d074371ab899aa97
 
 name:           saiko-backend
 version:        0.1.0.0
@@ -28,6 +28,8 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Server
+      Types
   other-modules:
       Paths_saiko_backend
   hs-source-dirs:
@@ -35,10 +37,13 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , containers
+    , http-types
     , lens
     , mtl
     , scotty
+    , text
     , transformers
     , warp
   default-language: Haskell2010
@@ -53,11 +58,14 @@ executable saiko-backend-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , containers
+    , http-types
     , lens
     , mtl
     , saiko-backend
     , scotty
+    , text
     , transformers
     , warp
   default-language: Haskell2010
@@ -73,11 +81,14 @@ test-suite saiko-backend-test
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , containers
+    , http-types
     , lens
     , mtl
     , saiko-backend
     , scotty
+    , text
     , transformers
     , warp
   default-language: Haskell2010
