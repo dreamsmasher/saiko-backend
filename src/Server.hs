@@ -16,29 +16,48 @@ import Data.Text.Lazy as T
 
 import Types
 
-handleChannelPost :: ActionM ()
-handleChannelPost = do
+parseThenDo' :: (FromJSON a) => (ByteString -> Maybe a) -> ActionM () -> (a -> ActionM ()) -> ActionM ()
+parseThenDo' d n j = do
     b <- body
-    c <- (pure . decode) b :: ActionM (Maybe Channel)
-    case c of
-        Nothing -> status status400 >> text "you dun goofed"
-        Just channel -> do
-            status status200
-            text $ "room accepted: " <> (view channelname channel) -- add room to db
+    z <- (pure . d) b
+    case z of
+        Nothing -> status status400 >> n
+        Just a -> status status200 >> j a
 
+-- little hack to avoid polymorphism nonsense
+parseThenDo :: (FromJSON a) => ActionM () -> (a -> ActionM ()) -> ActionM ()
+parseThenDo = parseThenDo' decode
+
+handleRoot :: ActionM ()
+handleRoot = text "saiko is running"
+
+handleChannelPost :: ActionM ()
+handleChannelPost = parseThenDo 
+    (text "you dun goofed")
+    $ text . ("room accepted: " <>) . view channelName
+    -- b <- body
+    -- c <- (pure . decode) b :: ActionM (Maybe Channel)
+    -- case c of
+    --     Nothing -> status status400 >> text "you dun goofed"
+    --     Just channel -> do
+    --         status status200
+    --         text $ "room accepted: " <> (view channelname channel) -- add room to db
 
 handleChannelGet :: ActionM ()
-handleChannelGet = undefined
+handleChannelGet = text "channels"
 
 handleMessageGet :: ActionM ()
 handleMessageGet = status status200 >> text "messages"
 
 handleMessagePost :: ActionM ()
-handleMessagePost = do
-    b <- body
-    m <- (pure . decode) b :: ActionM (Maybe Message)
-    case m of
-        Nothing -> status status400 >> text "invalid message"
-        Just msg -> do
-            status status200
-            text . T.pack . show $ msg
+handleMessagePost = parseThenDo
+    (text "invalid message")
+    (text . T.pack . show . (id :: Message -> Message)) -- temp hack to get it to type check
+
+handleUsersGet :: ActionM ()
+handleUsersGet = text "users"
+
+handleUsersPost :: ActionM ()
+handleUsersPost = parseThenDo
+    (text "invalid user")
+    (text. T.pack . show . (id :: User -> User))

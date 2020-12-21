@@ -31,6 +31,7 @@ dependencies:
 - bytestring
 - text
 - http-types
+- mongoDB
 
 library:
   source-dirs: src

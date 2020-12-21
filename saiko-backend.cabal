@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2ceb76e9fc1db103efd996e73cab52100ab92411af866a41d074371ab899aa97
+-- hash: 0e9b5d2458db8c3ee7491135fa6f5832d9d289375d8b7f941290f4999a31b14f
 
 name:           saiko-backend
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Lib
+      MongoDB
       Server
       Types
   other-modules:
@@ -41,6 +42,7 @@ library
     , containers
     , http-types
     , lens
+    , mongoDB
     , mtl
     , scotty
     , text
@@ -62,6 +64,7 @@ executable saiko-backend-exe
     , containers
     , http-types
     , lens
+    , mongoDB
     , mtl
     , saiko-backend
     , scotty
@@ -85,6 +88,7 @@ test-suite saiko-backend-test
     , containers
     , http-types
     , lens
+    , mongoDB
     , mtl
     , saiko-backend
     , scotty
