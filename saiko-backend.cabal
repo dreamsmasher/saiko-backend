@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0e9b5d2458db8c3ee7491135fa6f5832d9d289375d8b7f941290f4999a31b14f
+-- hash: 8a9e48bbf2f7b7caadb32a86b52d97d35c23b3a5ef678fa94f13824948b2ec81
 
 name:           saiko-backend
 version:        0.1.0.0
@@ -27,8 +27,8 @@ source-repository head
 
 library
   exposed-modules:
+      DB
       Lib
-      MongoDB
       Server
       Types
   other-modules:
@@ -40,9 +40,13 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hasql
+    , hasql-cursor-query
+    , hasql-implicits
+    , hasql-pool
+    , hasql-transaction
     , http-types
     , lens
-    , mongoDB
     , mtl
     , scotty
     , text
@@ -62,9 +66,13 @@ executable saiko-backend-exe
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hasql
+    , hasql-cursor-query
+    , hasql-implicits
+    , hasql-pool
+    , hasql-transaction
     , http-types
     , lens
-    , mongoDB
     , mtl
     , saiko-backend
     , scotty
@@ -86,9 +94,13 @@ test-suite saiko-backend-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hasql
+    , hasql-cursor-query
+    , hasql-implicits
+    , hasql-pool
+    , hasql-transaction
     , http-types
     , lens
-    , mongoDB
     , mtl
     , saiko-backend
     , scotty

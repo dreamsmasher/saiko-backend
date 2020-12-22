@@ -31,7 +31,12 @@ dependencies:
 - bytestring
 - text
 - http-types
-- mongoDB
+- hasql
+- hasql-transaction
+- hasql-implicits
+- hasql-cursor-query
+- hasql-pool
+
 
 library:
   source-dirs: src

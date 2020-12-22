@@ -39,8 +39,11 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
-
+extra-deps: 
+  - hasql-cursor-query-0.4.4.3@sha256:58991c862afdfbb794fa29c82b1eb54d7635e79d722c9c279bccb47c70236ecd,3218
+  - hasql-implicits-0.1.0.2@sha256:5d54e09cb779a209681b139fb3cc726bae75134557932156340cc0a56dd834a8,1361
+  - hasql-cursor-transaction-0.6.4@sha256:0f74f98751c1ce2cce0b0e1859fde2045b40b1244ac8ab0603535312dd426bd7,1908
+  - hasql-transaction-0.7.2@sha256:d6d8ceb0b32be75686fe31c4b5bc15c569a71023fc60394893508ea733e8714b,2835
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

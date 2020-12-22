@@ -1,21 +1,20 @@
 {-# LANGUAGE OverloadedStrings#-}
 module Main where
 
-import Lib
 import Server
 import Web.Scotty
 import System.Environment
-import Database.MongoDB
+import DB
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as BC
 
-import MongoDB
 import qualified Data.Text as T
 
 main :: IO ()
 main = do
-    [mongoUser, mongoPass] <- (map T.pack) <$> mapM getEnv ["MONGO_USER", "MONGO_PASS"]
-    -- let uri = fmtConnUrl mongoUser mongoPass "SaikoCluster"
-    -- putStrLn uri
-    connectAtlas (MAuth mongoUser mongoPass)
+    [user, pass] <- map BC.pack <$> mapM getEnv ["POSTGRE_USER", "POSTGRE_PASS"]
+    conn <- connDB (user, pass)
+    putStrLn "connected!" 
     scotty 3000 $ do
         get "/" handleRoot
         get "/channels" handleChannelGet
