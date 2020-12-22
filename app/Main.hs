@@ -12,9 +12,10 @@ import qualified Data.Text as T
 
 main :: IO ()
 main = do
-    mongoUsername <- T.pack <$> getEnv "MONGO_USER"
-    mongoPassword <- T.pack <$> getEnv "MONGO_PASS"
-    putStrLn $ fmtConnUrl mongoUsername mongoPassword "SaikoCluster"
+    [mongoUser, mongoPass] <- (map T.pack) <$> mapM getEnv ["MONGO_USER", "MONGO_PASS"]
+    -- let uri = fmtConnUrl mongoUser mongoPass "SaikoCluster"
+    -- putStrLn uri
+    connectAtlas (MAuth mongoUser mongoPass)
     scotty 3000 $ do
         get "/" handleRoot
         get "/channels" handleChannelGet

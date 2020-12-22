@@ -13,6 +13,7 @@ import Web.Scotty
 import Network.HTTP.Types
 import Control.Lens
 import Data.Text.Lazy as T
+import Data.Text.Lazy.Encoding (decodeUtf8)
 
 import Types
 
@@ -32,7 +33,7 @@ handleRoot :: ActionM ()
 handleRoot = text "saiko is running"
 
 handleChannelPost :: ActionM ()
-handleChannelPost = parseThenDo 
+handleChannelPost = parseThenDo
     (text "you dun goofed")
     $ text . ("room accepted: " <>) . view channelName
     -- b <- body
@@ -47,7 +48,7 @@ handleChannelGet :: ActionM ()
 handleChannelGet = text "channels"
 
 handleMessageGet :: ActionM ()
-handleMessageGet = status status200 >> text "messages"
+handleMessageGet = status status200 >> (text . decodeUtf8 . encode) (Msg "normie" "lobby" "this is a message" 10)
 
 handleMessagePost :: ActionM ()
 handleMessagePost = parseThenDo
