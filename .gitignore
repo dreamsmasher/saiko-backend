@@ -1,5 +1,5 @@
 .stack-work/
 *~
-run.sh
 db/*
+run.sh
 dist-newstyle/*

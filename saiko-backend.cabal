@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 80261c1b166680ec2f0d89223f46d60cd54b6d84f708fa92c2fe73bf48292c59
+-- hash: 6d0d6d0254df44fd1f241d88360db95e9d03a6ef7eb61e7a51a6cfda153b17d6
 
 name:           saiko-backend
 version:        0.1.0.0
@@ -28,7 +28,6 @@ source-repository head
 library
   exposed-modules:
       DB
-      Lib
       Server
       Types
   other-modules:
@@ -54,6 +53,9 @@ library
     , text
     , time
     , transformers
+    , wai
+    , wai-cors
+    , wai-extra
     , warp
   default-language: Haskell2010
 
@@ -84,6 +86,9 @@ executable saiko-backend-exe
     , text
     , time
     , transformers
+    , wai
+    , wai-cors
+    , wai-extra
     , warp
   default-language: Haskell2010
 
@@ -115,5 +120,8 @@ test-suite saiko-backend-test
     , text
     , time
     , transformers
+    , wai
+    , wai-cors
+    , wai-extra
     , warp
   default-language: Haskell2010
