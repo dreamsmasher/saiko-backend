@@ -39,6 +39,9 @@ dependencies:
 - contravariant
 - contravariant-extras
 - time
+- wai
+- wai-cors
+- wai-extra
 
 
 library:
