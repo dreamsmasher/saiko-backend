@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6d0d6d0254df44fd1f241d88360db95e9d03a6ef7eb61e7a51a6cfda153b17d6
+-- hash: 74306af1cb782eb8469df3b30a0b1a006026138c553ad137e5153ee842816037
 
 name:           saiko-backend
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       DB
+      OAuth
       Server
       Types
   other-modules:

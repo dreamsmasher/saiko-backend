@@ -22,6 +22,8 @@ import qualified Hasql.Encoders as E
 import qualified Hasql.Decoders as D
 import Data.Text (Text)
 import Data.Time ( UTCTime, utc, utcToLocalTime )
+
+import Types
 -- saikoSettings :: B.ByteString
 -- saikoSettings = "host=localhost port=5432 dbname=saiko connect_timeout=20"
 
@@ -54,7 +56,24 @@ addToChannel = Statement sql enc D.noResult True
                           ]
           enc = join contrazip2 textParam
 
+-- getUser :: Statement Text  
+getUser :: Statement Text (Maybe Text)
+getUser = Statement sql enc dec True
+    where sql = "select saved_session from users where username=$1"
+          enc = textParam
+          dec = D.singleRow (D.column $ D.nullable D.text) 
 
+-- getMessages :: Statement Channelname [Message]
+-- getMessages = Statement sql enc dec True
+--     where sql = C.unwords [ "select M.msg_time, M.body, U.name from Messages M"
+--                           , "join Users as U on U.id=M.user_id"
+--                           , "where M.channel_id in"
+--                           , "(select id from channels where channel_name=$1)"
+--                           ]
+--           enc = textParam
+--           mkMsg c i b n = Msg i b n c
+--           dec = D.rowList $ (\i b n -> Msg i b n )
+-- 
 createMessage :: Statement (Maybe UTCTime, Text, Username, Channelname) ()
 createMessage = Statement sql enc D.noResult True
     where sql = C.unwords [ "insert into messages (msg_time, body, user_id, channel_id)"

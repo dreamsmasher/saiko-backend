@@ -1,2 +1,13 @@
 cradle:
   stack:
+    - path: "./src"
+      component: "saiko-backend:lib"
+
+    - path: "./app/Main.hs"
+      component: "saiko-backend:exe:saiko-backend-exe"
+
+    - path: "./app/Paths_saiko_backend.hs"
+      component: "saiko-backend:exe:saiko-backend-exe"
+
+    - path: "./test"
+      component: "saiko-backend:test:saiko-backend-test"
