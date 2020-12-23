@@ -8,21 +8,20 @@ module DB ( connDB
           , addToChannel
           , createMessage
           ) where
+
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Char8 as C
 import Data.Functor.Contravariant
 import Data.Either
 import Contravariant.Extras
 import Control.Monad
-import System.Exit
+import System.Exit ( exitWith, ExitCode(ExitFailure) )
 import Hasql.Connection
-import Hasql.Statement
+import Hasql.Statement ( Statement(..) )
 import qualified Hasql.Encoders as E
 import qualified Hasql.Decoders as D
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Time
+import Data.Time ( UTCTime, utc, utcToLocalTime )
 -- saikoSettings :: B.ByteString
 -- saikoSettings = "host=localhost port=5432 dbname=saiko connect_timeout=20"
 

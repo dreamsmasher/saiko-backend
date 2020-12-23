@@ -26,7 +26,6 @@ import Types
 
 type SaikoM a = Connection -> ActionM a
 
-
 sts200, sts400, sts500 :: ActionM ()
 sts200 = status status200
 sts400 = status status400
