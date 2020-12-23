@@ -39,6 +39,7 @@ dependencies:
 - contravariant
 - contravariant-extras
 - time
+- postgresql-binary
 - wai
 - wai-cors
 - wai-extra

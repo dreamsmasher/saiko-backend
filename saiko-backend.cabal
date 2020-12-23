@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 74306af1cb782eb8469df3b30a0b1a006026138c553ad137e5153ee842816037
+-- hash: 3fee1df084255c89bcf0c5ee93d1c6ab04aca5c628f6dc20be824d8c6ba985cd
 
 name:           saiko-backend
 version:        0.1.0.0
@@ -50,6 +50,7 @@ library
     , http-types
     , lens
     , mtl
+    , postgresql-binary
     , scotty
     , text
     , time
@@ -82,6 +83,7 @@ executable saiko-backend-exe
     , http-types
     , lens
     , mtl
+    , postgresql-binary
     , saiko-backend
     , scotty
     , text
@@ -116,6 +118,7 @@ test-suite saiko-backend-test
     , http-types
     , lens
     , mtl
+    , postgresql-binary
     , saiko-backend
     , scotty
     , text

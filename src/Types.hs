@@ -20,7 +20,6 @@ data Message = Msg { _Mtime :: UTCTime
 deriveJSON defaultOptions{fieldLabelModifier = drop 2} ''Message
 makeLenses ''Message
 
-
 data Channel = Channel { _channelName :: Text
                        , _channelId :: Maybe Int
                        } deriving (Show)

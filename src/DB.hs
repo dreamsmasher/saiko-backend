@@ -21,7 +21,9 @@ import Hasql.Statement ( Statement(..) )
 import qualified Hasql.Encoders as E
 import qualified Hasql.Decoders as D
 import Data.Text (Text)
-import Data.Time ( UTCTime, utc, utcToLocalTime )
+import qualified Data.Text.Lazy as L
+import Data.Time ( LocalTime, UTCTime, utc, utcToLocalTime, localTimeToUTC )
+import PostgreSQL.Binary.Decoding 
 
 import Types
 -- saikoSettings :: B.ByteString
@@ -38,6 +40,12 @@ saikoSettings u p = settings "localhost" 5432 u p "saiko"
 
 textParam :: E.Params Text
 textParam = E.param $ E.nonNullable E.text
+
+textDecode :: D.Row Text
+textDecode = D.column $ D.nonNullable D.text
+
+lazyText :: D.Row L.Text
+lazyText = (D.column . D.nonNullable . (L.fromStrict <$>)) D.text
 
 connDB :: (DBUsername, DBPassword) -> IO Connection
 connDB = (acquire . uncurry saikoSettings) >=> either (print >=> const (exitWith $ ExitFailure 1)) pure
@@ -63,16 +71,27 @@ getUser = Statement sql enc dec True
           enc = textParam
           dec = D.singleRow (D.column $ D.nullable D.text) 
 
--- getMessages :: Statement Channelname [Message]
--- getMessages = Statement sql enc dec True
---     where sql = C.unwords [ "select M.msg_time, M.body, U.name from Messages M"
---                           , "join Users as U on U.id=M.user_id"
---                           , "where M.channel_id in"
---                           , "(select id from channels where channel_name=$1)"
---                           ]
---           enc = textParam
---           mkMsg c i b n = Msg i b n c
---           dec = D.rowList $ (\i b n -> Msg i b n )
+getMessages :: Statement Channelname [Message]
+getMessages = Statement sql enc dec True
+    where sql = C.unwords [ "select M.msg_time, M.body, U.name, $1 as channel from Messages as M"
+                          , "join Users as U on U.id=M.user_id"
+                          , "where M.channel_id in"
+                          , "(select id from channels where channel_name=$1)"
+                          ]
+          enc = textParam
+          dec = D.rowList $ Msg . localTimeToUTC utc
+            <$> (D.column . D.nonNullable) D.timestamp  
+            <*> lazyText
+            <*> lazyText
+            <*> lazyText
+
+getChannel :: Statement Channelname Channel 
+getChannel = Statement "select channel_name, id from channels where channel_name=$1" enc dec True
+    where enc = textParam
+          dec = D.singleRow $ Channel 
+            <$> lazyText 
+            <*> (D.column . D.nullable . (fromIntegral <$>)) D.int4
+
 -- 
 createMessage :: Statement (Maybe UTCTime, Text, Username, Channelname) ()
 createMessage = Statement sql enc D.noResult True
