@@ -36,6 +36,9 @@ dependencies:
 - hasql-implicits
 - hasql-cursor-query
 - hasql-pool
+- contravariant
+- contravariant-extras
+- time
 
 
 library:

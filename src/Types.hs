@@ -5,15 +5,16 @@
 module Types where
 
 import Data.Aeson
+import Data.Time ( UTCTime )
 import Data.Aeson.TH
 import Control.Lens.TH
 import Data.Text.Lazy hiding (drop)
 import Data.ByteString.Lazy hiding (drop)
 
-data Message = Msg { _MuserName :: Text
+data Message = Msg { _Mtime :: UTCTime
+                   , _Mbody :: Text
+                   , _MuserName :: Text
                    , _Mchannel :: Text
-                   , _Mtext :: Text
-                   , _Mtime :: Int
                    } deriving (Eq, Show)
 
 deriveJSON defaultOptions{fieldLabelModifier = drop 2} ''Message
