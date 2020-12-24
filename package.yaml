@@ -25,6 +25,7 @@ dependencies:
 - warp
 - mtl
 - transformers
+- unordered-containers
 - containers
 - aeson
 - lens
@@ -43,7 +44,7 @@ dependencies:
 - wai
 - wai-cors
 - wai-extra
-
+- attoparsec
 
 library:
   source-dirs: src

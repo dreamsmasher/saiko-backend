@@ -34,8 +34,8 @@ route conn =
       sts200 >> text "yee"
     get "/" handleRoot
     get "/channels" handleChannelGet
-    get "/messages" handleMessageGet
-    get "/users" handleUsersGet
+    get "/messages" $ handleMessageGet conn
+    get "/users" $ handleUsersGet conn
     post "/channels" (handleChannelPost conn)
     post "/messages" (handleMessagePost conn)
     post "/users" (handleUsersPost conn)

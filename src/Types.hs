@@ -5,6 +5,7 @@
 module Types where
 
 import Data.Aeson
+import Data.Aeson.Types
 import Data.Time ( UTCTime )
 import Data.Aeson.TH
 import Control.Lens.TH
@@ -31,6 +32,11 @@ data User = User { _username :: Text
                  , _userId :: Maybe Int
                  } deriving (Eq, Show)
 
+data UserChnl = USC Text Text
+
+instance FromJSON UserChnl where
+    parseJSON (Object v) = USC <$> v .: "userName" <*> v .: "channelName"
+    parseJSON x = prependFailure "parsing UserChnl failed, " $ typeMismatch "Object" x
 
 deriveJSON defaultOptions{fieldLabelModifier = drop 1} ''User
 makeLenses ''User

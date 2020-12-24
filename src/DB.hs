@@ -7,6 +7,10 @@ module DB ( connDB
           , createChannel
           , addToChannel
           , createMessage
+          , userIsAuth
+          , getChannel
+          , getMessages
+          , getUser
           ) where
 
 import qualified Data.ByteString as B
@@ -92,13 +96,21 @@ getChannel = Statement "select channel_name, id from channels where channel_name
             <$> lazyText 
             <*> (D.column . D.nullable . (fromIntegral <$>)) D.int4
 
--- 
+userIsAuth :: Statement (Username, Channelname) Bool 
+userIsAuth = Statement sql enc dec True
+    where sql = C.unwords [ "select exists (select 1 from channels_users where"
+                          , "user_id=(select max(id) from users where username=$1) and"
+                          , "channel_id=(select max(id) from channels where channel_name=$2))"
+                          ]
+          enc = join contrazip2 textParam
+          dec = (D.singleRow . D.column . D.nonNullable) D.bool
+
 createMessage :: Statement (Maybe UTCTime, Text, Username, Channelname) ()
 createMessage = Statement sql enc D.noResult True
     where sql = C.unwords [ "insert into messages (msg_time, body, user_id, channel_id)"
                           , "values ($1, $2,"
-                          , "(select id from Users where username=$3)"
-                          , ",(select id from Channels where channel_name=$4))"
+                          , "(select id from Users where username=$3),"
+                          , "(select id from Channels where channel_name=$4))"
                           ]
           fromUtc = E.param $ E.nullable (E.timestamp >$$< utcToLocalTime utc)
           enc = contrazip4 fromUtc textParam textParam textParam

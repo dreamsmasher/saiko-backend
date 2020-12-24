@@ -10,9 +10,11 @@ import Control.Arrow
 import Control.Lens
 import Control.Monad
 import Control.Monad.Trans
+import Data.Maybe
 import DB
 import Data.Aeson
-import Data.ByteString.Lazy
+import Data.Aeson.Parser
+import Data.ByteString.Lazy as L
 import Data.Text.Lazy as T
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time
@@ -22,6 +24,7 @@ import Hasql.Statement (Statement)
 import Network.HTTP.Types
 import Types
 import Web.Scotty
+import qualified Data.HashMap.Strict as M
 
 type SaikoM a = Connection -> ActionM a
 
@@ -35,6 +38,10 @@ runSaiko f a conn = do
   let session = statement a f
   liftIO (print "runnin")
   liftIO (run session conn)
+
+quickParse :: ByteString -> Maybe Object
+quickParse = 
+  decodeStrictWith json' (\case {Object a -> Success a; _ -> Error "parse"}) . L.toStrict 
 
 parse :: (FromJSON a) => ActionM (Maybe a)
 parse = decode <$> body
@@ -64,8 +71,15 @@ handleChannelPost conn = do
 handleChannelGet :: ActionM ()
 handleChannelGet = text "channels get successful"
 
-handleMessageGet :: ActionM ()
-handleMessageGet = liftIO getCurrentTime >>= \u -> sts200 >> (text . decodeUtf8 . encode) (Msg u "ping, we got your msg" "normie" "lobby")
+handleMessageGet :: SaikoM ()
+handleMessageGet conn = do
+  obj <- (decode :: ByteString -> Maybe UserChnl) <$> body
+  case obj of 
+    Nothing -> sts400 >> text "invalid input, couldn't parse"
+    Just (USC user chnl) -> do
+      auth <- runSaiko userIsAuth (join (***) T.toStrict (user, chnl)) conn
+      dbCheck auth
+      pure ()
 
 handleMessagePost :: SaikoM ()
 handleMessagePost conn = do
@@ -78,8 +92,12 @@ handleMessagePost conn = do
       res <- runSaiko createMessage (Just t, b', u', c') conn
       dbCheck res
 
-handleUsersGet :: ActionM ()
-handleUsersGet = text "users"
+handleUsersGet :: SaikoM ()
+handleUsersGet conn = do
+  obj <- quickParse <$> body
+  case obj of 
+    Just r -> sts200 >> liftIO (print . M.lookup "username" $ r) >> text "parsed"
+    _ -> sts400 >> text "invalid"
 
 handleUsersPost :: SaikoM ()
 handleUsersPost conn = do
