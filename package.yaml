@@ -45,6 +45,9 @@ dependencies:
 - wai-cors
 - wai-extra
 - attoparsec
+- opaleye
+- product-profunctors
+- postgresql-simple
 
 library:
   source-dirs: src

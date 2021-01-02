@@ -2,36 +2,34 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module DB ( connDB
-          , createUser
-          , createChannel
-          , addToChannel
-          , createMessage
-          , userIsAuth
-          , getChannel
-          , getMessages
-          , getUser
-          ) where
+module DB where
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C
+import Data.Int
 import Data.Functor.Contravariant
+import Data.Functor
 import Data.Either
+import Data.Maybe
 import Contravariant.Extras
 import Control.Monad
+import Control.Arrow
+import Control.Lens
 import System.Exit ( exitWith, ExitCode(ExitFailure) )
-import Hasql.Connection
-import Hasql.Statement ( Statement(..) )
-import qualified Hasql.Encoders as E
-import qualified Hasql.Decoders as D
-import Data.Text (Text)
+import Hasql.Connection ( settings, Settings )
+import Data.Text (Text, pack)
 import qualified Data.Text.Lazy as L
 import Data.Time ( LocalTime, UTCTime, utc, utcToLocalTime, localTimeToUTC )
-import PostgreSQL.Binary.Decoding 
+-- import PostgreSQL.Binary.Decoding 
+import Opaleye as O
+-- import Opaleye.Operators
+import Data.Profunctor.Product
+import Database.PostgreSQL.Simple 
 
 import Types
 -- saikoSettings :: B.ByteString
 -- saikoSettings = "host=localhost port=5432 dbname=saiko connect_timeout=20"
+
 
 type DBUsername = B.ByteString
 type DBPassword = B.ByteString
@@ -39,82 +37,203 @@ type DBPassword = B.ByteString
 type Username = Text
 type Channelname = Text
 
-saikoSettings :: DBUsername -> DBPassword -> Settings
-saikoSettings u p = settings "localhost" 5432 u p "saiko"
+saikoSettings :: DBUsername -> DBPassword -> ConnectInfo
+saikoSettings u p = ConnectInfo "localhost" 5432 u' p' "saiko"
+    where (u', p') = (C.unpack u, C.unpack p)
 
-textParam :: E.Params Text
-textParam = E.param $ E.nonNullable E.text
+connDB :: DBUsername -> DBPassword -> IO Connection
+connDB u p = connect $ saikoSettings u p
 
-textDecode :: D.Row Text
-textDecode = D.column $ D.nonNullable D.text
+-- Ct = contravariant, Cv = covariant
+-- Table is just a wrapper around Profunctor
+type UserFieldCt = (Maybe (Field SqlInt4), Field SqlText, Field SqlText, FieldNullable SqlText, FieldNullable SqlInt4)
+type UserField = (Field SqlInt4, Field SqlText, Field SqlText, FieldNullable SqlText, FieldNullable SqlInt4)
 
-lazyText :: D.Row L.Text
-lazyText = (D.column . D.nonNullable . (L.fromStrict <$>)) D.text
+usersTable :: Table UserFieldCt UserField
+usersTable = table "Users" $ p5 ( optionalTableField "id"
+                                , tableField "username"
+                                , tableField "password"
+                                , tableField "saved_session"
+                                , tableField "settings"
+                                )
+    
+selectUsers :: Select UserField
+selectUsers = selectTable usersTable
 
-connDB :: (DBUsername, DBPassword) -> IO Connection
-connDB = (acquire . uncurry saikoSettings) >=> either (print >=> const (exitWith $ ExitFailure 1)) pure
+type SettingsFieldCt = (Maybe (Field SqlInt4), FieldNullable SqlInt4, FieldNullable SqlBool)
+type SettingsField = (Field SqlInt4, FieldNullable SqlInt4, FieldNullable SqlBool)
 
-createUser :: Statement Username ()
-createUser = Statement sql textParam D.noResult True
-    where sql = "insert into Users (username) values ($1)"
+settingsTable :: Table SettingsFieldCt SettingsField
+settingsTable = table "Settings" $ p3 ( optionalTableField "id"
+                                      , tableField "user_id"
+                                      , tableField "darkmode"
+                                      )
+
+selectSettings :: Select SettingsField
+selectSettings = selectTable settingsTable
+
+type ChannelsFieldCt = (Maybe (Field SqlInt4), Field SqlText)
+type ChannelsField = (Field SqlInt4, Field SqlText)
+
+channelsTable :: Table ChannelsFieldCt ChannelsField
+channelsTable = table "Channels" $ p2 ( optionalTableField "id"
+                                      , tableField "channel_name"
+                                      )
+
+selectChannels :: Select ChannelsField
+selectChannels = selectTable channelsTable
+
+type ChnlUsrFieldCt = (Maybe (Field SqlInt4), FieldNullable SqlInt4, FieldNullable SqlInt4, FieldNullable SqlInt4)
+type ChnlUsrField = (Field SqlInt4, FieldNullable SqlInt4, FieldNullable SqlInt4, FieldNullable SqlInt4)
+
+channelsUsersTable :: Table ChnlUsrFieldCt ChnlUsrField 
+channelsUsersTable = table "Channels_Users" $ p4 ( optionalTableField "id"
+                                                 , tableField "user_id"
+                                                 , tableField "channel_id"
+                                                 , tableField "permissions"
+                                                 )
+
+selectChannelsUsers :: Select ChnlUsrField
+selectChannelsUsers  = selectTable channelsUsersTable
+
+type MessageFieldCt = (Maybe (Field SqlInt4), Field SqlText, Field SqlInt4, Field SqlInt4, Field SqlTimestamp)
+type MessageField = (Field SqlInt4, Field SqlText, Field SqlInt4, Field SqlInt4, Field SqlTimestamp)
+
+messagesTable :: Table MessageFieldCt MessageField
+messagesTable = table "Messages" $ p5 ( optionalTableField "id"
+                                      , tableField "body"
+                                      , tableField "channel_id"
+                                      , tableField "user_id"
+                                      , tableField "msg_time"
+                                      )
+
+selectMessages :: Select MessageField
+selectMessages = selectTable messagesTable
+
+where_ :: Field PGBool -> Select ()
+where_ = viaLateral restrict
+-- for some reason it's not being exported??
+
+getChnlName :: Field SqlInt4 -> Select (Field SqlText)
+getChnlName channelId = do
+    (ci, cn) <- selectChannels
+    where_ $ ci .== channelId
+    pure cn
+    
+getChnlId :: Field SqlText -> Select (Field SqlInt4)
+getChnlId name = do
+    (ci, cn) <- selectChannels
+    where_ $ cn .== name
+    pure ci
+
+getUserName :: Field SqlInt4 -> Select (Field SqlText)
+getUserName userId = do
+    (i, u, _, _, _) <- selectUsers
+    where_ $ i .== userId
+    pure u
+
+getUserId :: UsernameS -> Select (Field SqlInt4)
+getUserId name = do
+    (i, u, _, _, _) <- selectUsers
+    where_ $ u .== name
+    pure i
+
+type UsernameS = Field SqlText
+type ChannelS = Field SqlText
+type UserId = Field SqlInt4
+type ChannelId = Field SqlInt4
+
+getMessages_ :: UsernameS -> Select (Field SqlInt4, Field SqlText, ChannelS, UsernameS, Field SqlTimestamp)
+    -- Select (Field SqlInt4, Field SqlTimestamp, Field SqlText, UsernameS, ChannelS)
+getMessages_ name = do
+    user <- getUserId name
+    (i, b, c, u, t) <- selectMessages
+    where_ $ u .== user
+    channel <- getChnlName c 
+    pure (i, b, channel, name, t)
+
+
+getMessages :: Connection -> Username -> IO [Message]
+getMessages conn name = map mkMsg <$> runSelect conn (getMessages_ nameField)
+    where nameField = sqlStrictText name -- :: UsernameS
+          mkMsg (i, b, c, n, t) = Msg (Just i) b c n (localTimeToUTC utc t)
+
+getSession :: Connection -> Username -> IO [Maybe Text] 
+getSession conn name = fmap (pack <$>) <$> runSelect conn getS
+    where getS :: Select (FieldNullable SqlText)
+          getS = do
+          (_, u, _, s, _) <- selectUsers
+          where_ $ u .== toFields name
+          pure s
+
+userIsAuth_ :: UsernameS -> ChannelS -> Select (Field SqlBool)
+userIsAuth_ name chnl = do 
+    uid <- toNullable <$> getUserId name -- no need to use getIds here
+    cid <- toNullable <$> getChnlId chnl
+    inSelect cid $ do
+        (_, u, c, _) <- selectChannelsUsers
+        where_ $ uid .== u
+        pure c
+
+userIsAuth :: Connection -> Username -> Channelname -> IO Bool
+userIsAuth conn name  =  toFields
+                     >>> userIsAuth_ (toFields name) 
+                     >>> runSelect conn 
+                     >>> (<&> fromMaybe False . listToMaybe) -- safer than head
+
+fstPent :: (a, b, c, d, e) -> a
+fstPent (a, _, _, _, _) = a -- to save from excessive pattern matching
+
+noop :: Maybe OnConflict
+noop = Just DoNothing
+
+createUser_ :: Username -> Insert [Int]
+createUser_ u = Insert usersTable values getId noop
+    where values = [(Nothing, sqlStrictText u, sqlString "", O.null, O.null)]
+          getId = rReturning fstPent
+
+createUser :: Connection -> Username -> IO User
+createUser conn name = do
+    id <- listToMaybe <$> runInsert_ conn (createUser_ name)
+    pure $ User (L.fromStrict name) id
+
+
+getIds :: Connection -> Username -> Channelname -> IO (Maybe (UserId, ChannelId))
+getIds conn u c = do
+    let queries = zipWith ($) [getUserId, getChnlId] $ sqlStrictText <$> [u, c]
+    ids <- traverse listToMaybe <$> mapM (runSelectI conn) queries
+    pure $ ids <&> (map sqlInt4 >>> \[uid, cid] -> (uid, cid))
+    -- yes, I'm aware that traverse and mapM are the same function
 
 -- on confirmation of room admin/permiss, add user to room
 -- user_id, channel_id
-addToChannel :: Statement (Username, Channelname) ()
-addToChannel = Statement sql enc D.noResult True
-    where sql = C.unwords [ "insert into Channels_Users (user_id, channel_id)"
-                          , "select U.id, C.id from Users as U, Channels as C"
-                          , "where U.username=$1 and C.channel_name=$2"
-                          ]
-          enc = join contrazip2 textParam
+addToChannel_ :: UserId -> ChannelId -> Insert Int64
+addToChannel_ u c = Insert channelsUsersTable values rCount noop
+    where values = [(Nothing, toNullable u, toNullable c, O.null)]
 
--- getUser :: Statement Text  
-getUser :: Statement Text (Maybe Text)
-getUser = Statement sql enc dec True
-    where sql = "select saved_session from users where username=$1"
-          enc = textParam
-          dec = D.singleRow (D.column $ D.nullable D.text) 
+addToChannel :: Connection -> Username -> Channelname -> IO (Maybe Int)
+addToChannel conn u  =  getIds conn u 
+                    >=> traverse (runInsert_ conn . uncurry addToChannel_) 
+                    >=> fmap fromIntegral >>> pure 
 
-getMessages :: Statement Channelname [Message]
-getMessages = Statement sql enc dec True
-    where sql = C.unwords [ "select M.msg_time, M.body, U.name, $1 as channel from Messages as M"
-                          , "join Users as U on U.id=M.user_id"
-                          , "where M.channel_id in"
-                          , "(select id from channels where channel_name=$1)"
-                          ]
-          enc = textParam
-          dec = D.rowList $ Msg . localTimeToUTC utc
-            <$> (D.column . D.nonNullable) D.timestamp  
-            <*> lazyText
-            <*> lazyText
-            <*> lazyText
+createChannel_ :: ChannelS -> Insert [Int]
+createChannel_ c = Insert channelsTable [(Nothing, c)] (rReturning fst) noop
 
-getChannel :: Statement Channelname Channel 
-getChannel = Statement "select channel_name, id from channels where channel_name=$1" enc dec True
-    where enc = textParam
-          dec = D.singleRow $ Channel 
-            <$> lazyText 
-            <*> (D.column . D.nullable . (fromIntegral <$>)) D.int4
+createChannel :: Connection -> Channelname -> IO Channel
+createChannel conn c  =  (runInsert_ conn . createChannel_ . sqlStrictText) c 
+                     <&> Channel (L.fromStrict c) . listToMaybe
 
-userIsAuth :: Statement (Username, Channelname) Bool 
-userIsAuth = Statement sql enc dec True
-    where sql = C.unwords [ "select exists (select 1 from channels_users where"
-                          , "user_id=(select max(id) from users where username=$1) and"
-                          , "channel_id=(select max(id) from channels where channel_name=$2))"
-                          ]
-          enc = join contrazip2 textParam
-          dec = (D.singleRow . D.column . D.nonNullable) D.bool
+createMessage_ :: Field SqlText -> ChannelId -> UserId -> Field SqlTimestamp -> Insert [Int]
+createMessage_ b c u t = Insert messagesTable values (rReturning fstPent) noop
+    where values = [(Nothing, b, c, u, t)]
 
-createMessage :: Statement (Maybe UTCTime, Text, Username, Channelname) ()
-createMessage = Statement sql enc D.noResult True
-    where sql = C.unwords [ "insert into messages (msg_time, body, user_id, channel_id)"
-                          , "values ($1, $2,"
-                          , "(select id from Users where username=$3),"
-                          , "(select id from Channels where channel_name=$4))"
-                          ]
-          fromUtc = E.param $ E.nullable (E.timestamp >$$< utcToLocalTime utc)
-          enc = contrazip4 fromUtc textParam textParam textParam
-
-createChannel :: Statement Text ()
-createChannel = Statement sql textParam D.noResult True
-    where sql = "insert into channels (channel_name) values ($1)"
+createMessage :: Connection -> Message -> IO (Maybe Message)
+createMessage conn m@(Msg _ b c u t) = do -- ignore id since we'll get it when we insert
+    let body = sqlLazyText b
+        time = sqlLocalTime $ utcToLocalTime utc t
+        [user, chnl] = map L.toStrict [u, c]
+    ids <- getIds conn user chnl
+    let mkMsg (uid, cid) = do
+        msgId <- listToMaybe <$> runInsert_ conn (createMessage_ body cid uid time)
+        pure $ m & mid .~ msgId 
+    traverse mkMsg ids -- traverse :: (a -> IO b) -> (Maybe a) -> IO (Maybe b)

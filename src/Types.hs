@@ -12,10 +12,11 @@ import Control.Lens.TH
 import Data.Text.Lazy hiding (drop)
 import Data.ByteString.Lazy hiding (drop)
 
-data Message = Msg { _Mtime :: UTCTime
+data Message = Msg { _Mid :: Maybe Int
                    , _Mbody :: Text
-                   , _MuserName :: Text
                    , _Mchannel :: Text
+                   , _MuserName :: Text
+                   , _Mtime :: UTCTime
                    } deriving (Eq, Show)
 
 deriveJSON defaultOptions{fieldLabelModifier = drop 2} ''Message

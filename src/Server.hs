@@ -18,9 +18,7 @@ import Data.ByteString.Lazy as L
 import Data.Text.Lazy as T
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time
-import Hasql.Connection (Connection)
-import Hasql.Session
-import Hasql.Statement (Statement)
+import Database.PostgreSQL.Simple
 import Network.HTTP.Types
 import Types
 import Web.Scotty
@@ -33,12 +31,6 @@ sts200 = status status200
 sts400 = status status400
 sts500 = status status500
 
-runSaiko :: Statement a b -> a -> SaikoM (Either QueryError b)
-runSaiko f a conn = do
-  let session = statement a f
-  liftIO (print "runnin")
-  liftIO (run session conn)
-
 quickParse :: ByteString -> Maybe Object
 quickParse = 
   decodeStrictWith json' (\case {Object a -> Success a; _ -> Error "parse"}) . L.toStrict 
@@ -46,27 +38,25 @@ quickParse =
 parse :: (FromJSON a) => ActionM (Maybe a)
 parse = decode <$> body
 
-dbCheck :: Either QueryError a -> ActionM ()
-dbCheck = either handleErr (const (sts200 >> text "success"))
-  where
-    handleErr err = do
-      sts400
-      text (T.pack $ show err)
+-- dbCheck :: Either QueryError a -> ActionM ()
+-- dbCheck = either handleErr (const (sts200 >> text "success"))
+--   where
+--     handleErr err = do
+--       sts400
+--       text (T.pack $ show err)
 
 handleRoot :: ActionM ()
 handleRoot = text "saiko is running"
 
 handleChannelPost :: SaikoM ()
 handleChannelPost conn = do
-  b <- body
-  liftIO (print b)
   c <- parse
-  liftIO (print "we do be handlin doe")
   case c of
     Nothing -> sts400 >> text "you dun goofed"
     Just channel -> do
-      res <- (flip (runSaiko createChannel) conn . T.toStrict . view channelName) channel
-      dbCheck res
+      res <- liftIO $ (createChannel conn . T.toStrict . view channelName) channel
+      -- res <- (flip (runSaiko createChannel) conn . T.toStrict . view channelName) channel
+      sts200
 
 handleChannelGet :: ActionM ()
 handleChannelGet = text "channels get successful"
@@ -87,7 +77,7 @@ handleMessagePost conn = do
   case m of
     Nothing -> sts400 >> text "invalid message!!!"
     Just msg -> do
-      let (Msg t b u c) = msg
+      let (Msg i b c u t) = msg
       let [b', u', c'] = T.toStrict <$> [b, u, c]
       res <- runSaiko createMessage (Just t, b', u', c') conn
       dbCheck res
