@@ -21,15 +21,25 @@ import Data.Time
 import Database.PostgreSQL.Simple
 import Network.HTTP.Types
 import Types
-import Web.Scotty
+import Web.Scotty as S
 import qualified Data.HashMap.Strict as M
 
 type SaikoM a = Connection -> ActionM a
+
+(?) :: Bool -> a -> a -> a
+(?) True = const
+(?) False = const id
 
 sts200, sts400, sts500 :: ActionM ()
 sts200 = status status200
 sts400 = status status400
 sts500 = status status500
+
+respond :: ToJSON a => a -> ActionM ()
+respond = S.json >=> const sts200 
+
+err :: Text -> ActionM ()
+err = text >=> const sts400
 
 quickParse :: ByteString -> Maybe Object
 quickParse = 
@@ -58,29 +68,28 @@ handleChannelPost conn = do
       -- res <- (flip (runSaiko createChannel) conn . T.toStrict . view channelName) channel
       sts200
 
-handleChannelGet :: ActionM ()
-handleChannelGet = text "channels get successful"
+handleChannelGet :: SaikoM ()
+handleChannelGet conn = text "channels get successful"
 
 handleMessageGet :: SaikoM ()
 handleMessageGet conn = do
   obj <- (decode :: ByteString -> Maybe UserChnl) <$> body
   case obj of 
-    Nothing -> sts400 >> text "invalid input, couldn't parse"
+    Nothing -> err "invalid input, couldn't parse"
     Just (USC user chnl) -> do
-      auth <- runSaiko userIsAuth (join (***) T.toStrict (user, chnl)) conn
-      dbCheck auth
-      pure ()
+      let [u, c] = T.toStrict <$> [user, chnl]
+      auth <- liftIO (userIsAuth conn u c)
+      auth ? (liftIO (getMessages conn u) >>= respond) $ status status401 
 
 handleMessagePost :: SaikoM ()
 handleMessagePost conn = do
   m <- parse
   case m of
-    Nothing -> sts400 >> text "invalid message!!!"
+    Nothing -> err "invalid message!!!"
     Just msg -> do
-      let (Msg i b c u t) = msg
-      let [b', u', c'] = T.toStrict <$> [b, u, c]
-      res <- runSaiko createMessage (Just t, b', u', c') conn
-      dbCheck res
+      res <- liftIO (createMessage conn msg)
+      maybe sts400 (const sts200) res
+      -- res <- runSaiko createMessage (Just t, b', u', c') conn
 
 handleUsersGet :: SaikoM ()
 handleUsersGet conn = do
@@ -93,8 +102,8 @@ handleUsersPost :: SaikoM ()
 handleUsersPost conn = do
   u <- parse
   case u of
-    Nothing -> sts400 >> text "invalid user!!!!"
+    Nothing -> err "invalid user!!!!"
     Just user -> do
       let name = (T.toStrict . view username) user
-      res <- runSaiko createUser name conn
-      dbCheck res
+      res <- liftIO (createUser conn name)
+      sts200

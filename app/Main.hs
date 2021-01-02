@@ -7,7 +7,7 @@ import DB
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Text as T
-import Hasql.Connection (Connection)
+import Database.PostgreSQL.Simple
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Network.Wai.Middleware.AddHeaders
@@ -19,7 +19,7 @@ import Web.Scotty
 main :: IO ()
 main = do
   [user, pass] <- map BC.pack <$> mapM getEnv ["POSTGRE_USER", "POSTGRE_PASS"]
-  conn <- connDB (user, pass)
+  conn <- connDB user pass
   putStrLn "connected!"
   scotty 3000 (route conn)
 
@@ -33,7 +33,7 @@ route conn =
       liftIO (print req)
       sts200 >> text "yee"
     get "/" handleRoot
-    get "/channels" handleChannelGet
+    get "/channels" $ handleChannelGet conn
     get "/messages" $ handleMessageGet conn
     get "/users" $ handleUsersGet conn
     post "/channels" (handleChannelPost conn)

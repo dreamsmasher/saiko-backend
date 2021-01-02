@@ -158,13 +158,24 @@ getMessages conn name = map mkMsg <$> runSelect conn (getMessages_ nameField)
     where nameField = sqlStrictText name -- :: UsernameS
           mkMsg (i, b, c, n, t) = Msg (Just i) b c n (localTimeToUTC utc t)
 
+getPresChannels :: UserId -> Select (ChannelId, ChannelS)
+getPresChannels uid = do
+    (i, c) <- selectChannels
+    where_ $ uid .== i
+    pure (i, c)
+
+-- getChannels :: Connection -> User -> IO (Maybe [Channel])
+-- getChannels conn (User n i) = do
+--     uid <-  maybe ((listToMaybe <$> runSelect conn . getUserId . sqlLazyText) n) (pure . Just) i
+    -- pure undefined
+  
 getSession :: Connection -> Username -> IO [Maybe Text] 
 getSession conn name = fmap (pack <$>) <$> runSelect conn getS
     where getS :: Select (FieldNullable SqlText)
           getS = do
-          (_, u, _, s, _) <- selectUsers
-          where_ $ u .== toFields name
-          pure s
+              (_, u, _, s, _) <- selectUsers
+              where_ $ u .== toFields name
+              pure s
 
 userIsAuth_ :: UsernameS -> ChannelS -> Select (Field SqlBool)
 userIsAuth_ name chnl = do 
@@ -234,6 +245,6 @@ createMessage conn m@(Msg _ b c u t) = do -- ignore id since we'll get it when w
         [user, chnl] = map L.toStrict [u, c]
     ids <- getIds conn user chnl
     let mkMsg (uid, cid) = do
-        msgId <- listToMaybe <$> runInsert_ conn (createMessage_ body cid uid time)
-        pure $ m & mid .~ msgId 
+            msgId <- listToMaybe <$> runInsert_ conn (createMessage_ body cid uid time)
+            pure $ m & mid .~ msgId 
     traverse mkMsg ids -- traverse :: (a -> IO b) -> (Maybe a) -> IO (Maybe b)
